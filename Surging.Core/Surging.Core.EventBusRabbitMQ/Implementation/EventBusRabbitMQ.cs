@@ -35,7 +35,6 @@ namespace Surging.Core.EventBusRabbitMQ.Implementation
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _subsManager = subsManager ?? new InMemoryEventBusSubscriptionsManager();
             _consumerChannel = CreateConsumerChannel();
-
             _subsManager.OnEventRemoved += SubsManager_OnEventRemoved;
         }
 
@@ -81,7 +80,7 @@ namespace Surging.Core.EventBusRabbitMQ.Implementation
 
                 channel.ExchangeDeclare(exchange: BROKER_NAME,
                                     type: "direct");
-
+           
                 var message = JsonConvert.SerializeObject(@event);
                 var body = Encoding.UTF8.GetBytes(message);
 
@@ -111,7 +110,9 @@ namespace Surging.Core.EventBusRabbitMQ.Implementation
                 {
                     channel.QueueBind(queue: _queueName,
                                       exchange: BROKER_NAME,
-                                      routingKey: eventName);
+                                      routingKey: eventName); 
+                      var properties = channel.CreateBasicProperties();  
+                      properties.DeliveryMode = 2;  
                 }
             }
 

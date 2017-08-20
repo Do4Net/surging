@@ -29,7 +29,6 @@ namespace Surging.Core.EventBusRabbitMQ
             builder.Services.Register(provider =>
             {
                 var logger = provider.Resolve<ILogger<DefaultRabbitMQPersistentConnection>>();
-
                 var HostName = AppConfig.Configuration["EventBusConnection"];
                 var factory = new ConnectionFactory()
                 {
@@ -47,7 +46,7 @@ namespace Surging.Core.EventBusRabbitMQ
             return builder;
         }
 
-        public static IServiceBuilder AddRabbitMqAdapt(this IServiceBuilder builder)
+        public static IServiceBuilder AddRabbitMQAdapt(this IServiceBuilder builder)
         {
             return builder.UseRabbitMQEventAdapt(provider =>
              new RabbitMqSubscriptionAdapt(

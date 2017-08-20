@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace Surging.Core.CPlatform
 {
@@ -37,11 +38,56 @@ namespace Surging.Core.CPlatform
         /// </summary>
         /// <param name="descriptor">服务描述符。</param>
         /// <param name="waitExecution">如果需要等待执行则为true，否则为false，默认为true。</param>
-        /// <returns></returns>
+        /// <returns>服务描述符。</returns>
         public static ServiceDescriptor WaitExecution(this ServiceDescriptor descriptor, bool waitExecution)
         {
             descriptor.Metadatas["WaitExecution"] = waitExecution;
             return descriptor;
+        }
+
+        /// <summary>
+        /// 获取负责人
+        /// </summary>
+        /// <param name="descriptor">服务描述符。</param>
+        /// <param name="waitExecution">负责人名字</param>
+        /// <returns>服务描述符。</returns>
+        public static ServiceDescriptor Director(this ServiceDescriptor descriptor, string director)
+        {
+            descriptor.Metadatas["Director"] = director;
+            return descriptor;
+        }
+
+        /// <summary>
+        /// 获取负责人
+        /// </summary>
+        /// <param name="descriptor">服务描述符。</param>
+        /// <returns></returns>
+        public static string Director(this ServiceDescriptor descriptor)
+        {
+            return descriptor.GetMetadata<string>("Director");
+        }
+
+
+        /// <summary>
+        /// 获取日期
+        /// </summary>
+        /// <param name="descriptor">服务描述符。</param>
+        /// <param name="waitExecution">日期/param>
+        /// <returns>服务描述符。</returns>
+        public static ServiceDescriptor Date(this ServiceDescriptor descriptor, string Date)
+        {
+            descriptor.Metadatas["Date"] = Date;
+            return descriptor;
+        }
+
+        /// <summary>
+        /// 获取日期
+        /// </summary>
+        /// <param name="descriptor">服务描述符。</param>
+        /// <returns>服务描述符。</returns>
+        public static string Date(this ServiceDescriptor descriptor)
+        {
+            return descriptor.GetMetadata<string>("Date");
         }
 
         /// <summary>
@@ -58,6 +104,7 @@ namespace Surging.Core.CPlatform
     /// <summary>
     /// 服务描述符。
     /// </summary>
+    [Serializable]
     public class ServiceDescriptor
     {
         /// <summary>

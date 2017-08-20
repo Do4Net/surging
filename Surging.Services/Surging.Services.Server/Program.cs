@@ -6,21 +6,22 @@ using Microsoft.Extensions.Logging;
 using Surging.Core.Caching.Configurations;
 using Surging.Core.CPlatform;
 using Surging.Core.CPlatform.Address;
+using Surging.Core.CPlatform.EventBus;
 using Surging.Core.CPlatform.Routing;
 using Surging.Core.CPlatform.Runtime.Server;
+using Surging.Core.CPlatform.Support;
 using Surging.Core.DotNetty;
+using Surging.Core.EventBusRabbitMQ;
+using Surging.Core.EventBusRabbitMQ.Configurations;
 using Surging.Core.ProxyGenerator.Utilitys;
 using Surging.Core.System.Ioc;
+using Surging.Core.Zookeeper;
+using Surging.Core.Zookeeper.Configurations;
 using System;
 using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
-using Surging.Core.EventBusRabbitMQ;
-using Surging.Core.EventBusRabbitMQ.Configurations;
-using Surging.IModuleServices.Common.Models.Events;
-using Surging.Core.CPlatform.EventBus;
-using Surging.Modules.Common.IntegrationEvents.EventHandling;
 
 namespace Surging.Services.Server
 {
@@ -34,16 +35,16 @@ namespace Surging.Services.Server
             var config = new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory);
             ConfigureEventBus(config);
+            ConfigureCache(config);
             ConfigureLogging(services);
             builder.Populate(services);
             ConfigureService(builder);
             ServiceLocator.Current = builder.Build();
-            ConfigureCache(config);
             ServiceLocator.GetService<ILoggerFactory>()
                    .AddConsole((c, l) => (int)l >= 3);
             ConfigureRoutes();
             ServiceLocator.GetService<ISubscriptionAdapt>().SubscribeAt();
-          var d=  ServiceLocator.GetService<UserLoginDateChangeHandler>();
+           ServiceLocator.GetService<IServiceCommandManager>().SetServiceCommandsAsync();
             StartService();
             Console.ReadLine();
         }
@@ -60,11 +61,15 @@ namespace Surging.Services.Server
             builder.RegisterRepositories();
             builder.RegisterModules();
             builder.RegisterServiceBus();
-            builder.AddCoreServce()
-                 .AddServiceRuntime()
-                 .UseSharedFileRouteManager("c:\\routes.txt")//配置本地路由文件路径
-                 .UseDotNettyTransport().UseRabbitMQTransport().AddRabbitMqAdapt();//配置Netty
-            builder.Register(p => new CPlatformContainer(ServiceLocator.Current));
+            builder.AddMicroService(option =>
+            {
+                option.AddServiceRuntime();
+                option.UseZooKeeperManager(new ConfigInfo("127.0.0.1:2181"));
+                option.UseDotNettyTransport();
+                option.UseRabbitMQTransport();
+                option.AddRabbitMQAdapt();
+                builder.Register(p => new CPlatformContainer(ServiceLocator.Current));
+            });
         }
 
         /// <summary>
@@ -104,7 +109,7 @@ namespace Surging.Services.Server
                 ServiceDescriptor = i.Descriptor
             }).ToList();
             var serviceRouteManager = ServiceLocator.GetService<IServiceRouteManager>();
-            serviceRouteManager.SetRoutesAsync(addressDescriptors).Wait();
+            serviceRouteManager.SetRoutesAsync(addressDescriptors);
         }
 
         /// <summary>

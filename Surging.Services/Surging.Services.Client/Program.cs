@@ -18,6 +18,14 @@ using Surging.Core.EventBusRabbitMQ;
 using Surging.Core.EventBusRabbitMQ.Configurations;
 using Microsoft.Extensions.Configuration;
 using Surging.IModuleServices.Common.Models.Events;
+using Surging.Core.CPlatform.Runtime.Server;
+using Surging.Core.CPlatform.Address;
+using Surging.Core.CPlatform.Routing;
+using Surging.Core.System.Intercept;
+using Surging.IModuleServices.Common.Models;
+using Surging.Core.Caching.Configurations;
+using Surging.Core.Zookeeper;
+using Surging.Core.Zookeeper.Configurations;
 
 namespace Surging.Services.Client
 {
@@ -34,6 +42,7 @@ namespace Surging.Services.Client
             ConfigureLogging(services);
             builder.Populate(services);
             ConfigureService(builder);
+            ConfigureCache(config);
             ServiceLocator.Current = builder.Build();
             ServiceLocator.GetService<ILoggerFactory>()
                 .AddConsole((c, l) => (int)l >= 3);
@@ -49,7 +58,7 @@ namespace Surging.Services.Client
             build
             .AddEventBusFile("eventBusSettings.json", optional: false);
         }
-
+        
         /// <summary>
         /// 配置相关服务
         /// </summary>
@@ -61,10 +70,14 @@ namespace Surging.Services.Client
             builder.RegisterServices();
             builder.RegisterRepositories();
             builder.RegisterModules();
-            var serviceBulider = builder
-                 .AddClient()
-                 .UseSharedFileRouteManager("c:\\routes.txt")
-                 .UseDotNettyTransport().UseRabbitMQTransport();
+            builder.AddMicroService(option => {
+                option.AddClient();
+                option.AddClientIntercepted(typeof(CacheProviderInterceptor));
+                option.UseZooKeeperManager(new ConfigInfo("127.0.0.1:2181"));
+                option.UseDotNettyTransport();
+                option.UseRabbitMQTransport();
+                builder.Register(p => new CPlatformContainer(ServiceLocator.Current));
+            });
         }
 
         /// <summary>
@@ -74,6 +87,15 @@ namespace Surging.Services.Client
         public static void ConfigureLogging(IServiceCollection services)
         {
             services.AddLogging();
+        }
+
+        /// <summary>
+        /// 配置缓存服务
+        /// </summary>
+        public static void ConfigureCache(IConfigurationBuilder build)
+        {
+            build
+              .AddCacheFile("cacheSettings.json", optional: false);
         }
 
         /// <summary>
@@ -97,7 +119,7 @@ namespace Surging.Services.Client
             Task.Run(async () =>
             {
                 var userProxy = serviceProxyFactory.CreateProxy<IUserService>("User");
-                await userProxy.GetUser(1);
+                await userProxy.GetUserId("user");
                 do
                 {
                     Console.WriteLine("正在循环 1w次调用 GetUser.....");
@@ -105,7 +127,7 @@ namespace Surging.Services.Client
                     var watch = Stopwatch.StartNew();
                     for (var i = 0; i < 10000; i++)
                     {
-                        await userProxy.GetUser(1);
+                       await  userProxy.GetUser(new UserModel { UserId = 1 });
                     }
                     watch.Stop();
                     Console.WriteLine($"1w次调用结束，执行时间：{watch.ElapsedMilliseconds}ms");
